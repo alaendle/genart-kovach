@@ -66,8 +66,9 @@ genQuadGrid = do
     pure $ v ^* 2
   pure . nub . flip map vectors $ \v ->
     let v' = fromIntegralVector v
+        r = sqrt (2.0 * 1.5 * 1.5) / 2.0
     in --[v', (v' ^+^ V2 0 1.5), (v' ^+^ V2 1.5 1.5), (v' ^+^ V2 1.5 0)]
-      map (^+^ v') (genPoly 4 1.0 1.0 0.0)
+      map (^+^ v') (genPoly 4 1.0 r (pi / 4.0))
 
 genPoly :: Int -> Double -> Double -> Double -> [V2 Double]
 genPoly n m r t =

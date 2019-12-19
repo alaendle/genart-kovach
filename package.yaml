@@ -20,14 +20,14 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/jxxcarlson/art#readme>
 
 dependencies:
-- base >= 4.7 && < 5
-- MonadRandom >= 0.5 && < 6
+- base
+- MonadRandom
 - mtl
-- colour >= 2.3.5 && < 3
-- time >= 1.4 && < 2
-- cairo >= 0.13 && < 0.14
-- linear >= 1.20 && < 2.0
-- hsnoise >= 0.0.2 && < 0.1
+- colour
+- time
+- cairo
+- linear
+- hsnoise
 
 
 library:
