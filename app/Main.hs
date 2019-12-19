@@ -28,13 +28,7 @@ data World = World
   , worldScale  :: Double
   }
 
-data Quad = Quad
-  { quadA :: V2 Double
-  , quadB :: V2 Double
-  , quadC :: V2 Double
-  , quadD :: V2 Double
-  } deriving (Eq, Ord)
-
+type Poly = [V2 Double]
 
 type Generate a = RandT StdGen (ReaderT World Render) a
 
@@ -64,7 +58,7 @@ eggshell = hsva 71 0.13 0.96
 fromIntegralVector :: V2 Int -> V2 Double
 fromIntegralVector (V2 x y) = V2 (fromIntegral x) (fromIntegral y)
 
-genQuadGrid :: Generate [Quad]
+genQuadGrid :: Generate [Poly]
 genQuadGrid = do
   (w, h) <- getSize @Int
   vectors <- replicateM 800 $ do
@@ -72,7 +66,17 @@ genQuadGrid = do
     pure $ v ^* 2
   pure . nub . flip map vectors $ \v ->
     let v' = fromIntegralVector v
-    in Quad v' (v' ^+^ V2 0 1.5) (v' ^+^ V2 1.5 1.5) (v' ^+^ V2 1.5 0)
+    in --[v', (v' ^+^ V2 0 1.5), (v' ^+^ V2 1.5 1.5), (v' ^+^ V2 1.5 0)]
+      map (^+^ v') (genPoly 4 1.0 1.0 0.0)
+
+genPoly :: Int -> Double -> Double -> Double -> [V2 Double]
+genPoly n m r t =
+    map (genPoint n m r t) [0..n]
+  where
+    genPoint :: Int -> Double -> Double -> Double -> Int -> V2 Double
+    genPoint n m r t k =
+      V2 (r * cos (fromIntegral k*w+t)) (r * sin (fromIntegral k*w+t))
+      where w = 2.0 * pi * m / fromIntegral n
 
 renderClosedPath :: [V2 Double] -> Render ()
 renderClosedPath (V2 x y:vs) = do
@@ -82,14 +86,23 @@ renderClosedPath (V2 x y:vs) = do
   closePath
 renderClosedPath [] = pure ()
 
-renderQuad :: Quad -> Render ()
-renderQuad Quad{..} = renderClosedPath [quadA, quadB, quadC, quadD]
+renderQuad :: Poly -> Render ()
+renderQuad = renderClosedPath
 
 darkGunmetal :: Double -> Render ()
 darkGunmetal = hsva 170 0.30 0.16
 
-quadAddNoise :: Quad -> Generate Quad
-quadAddNoise Quad{..} = do
+teaGreen :: Double -> Render ()
+teaGreen = hsva 81 0.25 0.94
+
+vividTangerine :: Double -> Render ()
+vividTangerine = hsva 11 0.40 0.92
+
+englishVermillion :: Double -> Render ()
+englishVermillion = hsva 355 0.68 0.84
+
+quadAddNoise :: Poly -> Generate Poly
+quadAddNoise poly = do
   perlinSeed <- fromIntegral <$> asks worldSeed
 
   let
@@ -102,11 +115,7 @@ quadAddNoise Quad{..} = do
       = P.noiseValue perlinNoise (x + perlinSeed, y + perlinSeed, perlinSeed) - 0.5
     addNoise v = let noise = perlin2d v in v ^+^ V2 (noise / 5) (noise / 8)
 
-  pure $ Quad
-    (addNoise quadA)
-    (addNoise quadB)
-    (addNoise quadC)
-    (addNoise quadD)
+  pure $ map addNoise poly
 
 renderSketch :: Generate ()
 renderSketch = do
@@ -117,13 +126,22 @@ renderSketch = do
   quads <- genQuadGrid
   noisyQuads <- traverse quadAddNoise quads
 
-  cairo $ for_ noisyQuads $ \quad -> do
-    renderQuad quad
-    darkGunmetal 1 *> stroke
+  for_ noisyQuads $ \quad -> do
+    strokeOrFill <- weighted [(fill, 0.4), (stroke, 0.6)]
+    color <- uniform
+       [ teaGreen
+       , vividTangerine
+       , englishVermillion
+       , darkGunmetal
+       ]
+    cairo $ do
+      renderQuad quad
+      color 1 *> strokeOrFill
 
 main :: IO ()
 main = do
-  seed <- round . (*1000) <$> getPOSIXTime
+  --seed <- round . (*1000) <$> getPOSIXTime
+  let seed = 1520476193207
   let
     stdGen = mkStdGen seed
     width = 60
@@ -147,6 +165,6 @@ main = do
 
   putStrLn "Generating art..."
   surfaceWriteToPNG surface
-    $ "images/example_sketch/"
+    $ "images/"
     <> show seed <> "-" <> show (round scaleAmount :: Int) <> ".png"
-  surfaceWriteToPNG surface "images/example_sketch/latest.png"
+  surfaceWriteToPNG surface "images/latest.png"

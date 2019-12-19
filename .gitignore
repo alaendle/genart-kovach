@@ -2,3 +2,4 @@ app/Main
 *.hi
 *.o
 images/
+.stack-work
